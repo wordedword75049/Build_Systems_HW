@@ -1,24 +1,33 @@
-cmake_minimum_required(VERSION 3.5)
+cmake_minimum_required(VERSION 3.10)
 
-find_package(PythonLibs 3.7 REQUIRED)
-find_package(Boost REQUIRED COMPONENTS system python37)
+project(BuildSystemsFun CXX)
 
-include_directories(${Boost_INCLUDE_DIRS})
-include_directories(${PYTHON_INCLUDE_DIRS})
-link_directories(${Boost_LIBRARY_DIRS})
+find_package(Doxygen)
 
-set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_LIBRARY_OUTPUT_DIRECTORY "${PROJECT_SOURCE_DIR}/lib")
+set(MAIN_SOURCE b/main.cpp)
 
+add_executable(BuildSystemsFun ${MAIN_SOURCE})
 
-function(build_python_target target)
-    set_target_properties(${target} PROPERTIES PREFIX "")
-    set_target_properties(${target} PROPERTIES SUFFIX ".so")
-    target_link_libraries(${target} ${Boost_LIBRARIES} ${PYTHON_LIBRARIES})
-endfunction(build_python_target)
+add_subdirectory(a)
 
-add_subdirectory(00-hello-world)
-add_subdirectory(01-classes)
-add_subdirectory(02-get-set)
-add_subdirectory(03-inheritance)
+add_custom_command(
+        OUTPUT index.h
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/c
+        COMMAND python preparing.py
+        COMMENT "Generating c/index.h"
+        VERBATIM
+)
+add_custom_target(PreparingIndex DEPENDS index.h COMMENT "Checking if re-generation is required")
+add_dependencies(BuildSystemsFun PreparingIndex)
 
+add_custom_target(
+        doc ALL
+        COMMAND doxygen -g Doxyfile && doxygen Doxyfile
+        WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}/doc
+        COMMENT "Generating documentation with Doxygen"
+        VERBATIM
+)
+
+target_compile_options(BuildSystemsFun PUBLIC -std=c++14)
+target_link_libraries(BuildSystemsFun PUBLIC ALibrary)
+target_include_directories(BuildSystemsFun PUBLIC ${PROJECT_SOURCE_DIR} b)
